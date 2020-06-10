@@ -1,0 +1,74 @@
+version: '3.8'
+services:
+
+  public_server:
+    image: httpd:2.4
+    hostname: public_server
+    networks:
+      public_network:
+    volumes:
+      - ./public/public_html:/usr/local/apache2/htdocs/
+
+  private_server:
+    image: httpd:2.4
+    hostname: private_server
+    networks:
+      private_network:
+    volumes:
+      - ./private/public_html:/usr/local/apache2/htdocs/
+
+  reverseproxy:
+    image: httpd:2.4
+    command: httpd-foreground -f conf/reverseproxy_httpd.conf    
+    hostname: reverseproxy
+    networks:
+      public_network:
+      private_network:
+      keycloak_network:
+    volumes:
+      - ./reverseproxy/public_html:/usr/local/apache2/htdocs/
+      - ${PWD}/reverseproxy/conf/reverseproxy_httpd.conf:/usr/local/apache2/conf/reverseproxy_httpd.conf
+      - ${PWD}/reverseproxy/conf/reverseproxy.conf:/usr/local/apache2/conf/reverseproxy.conf
+    ports:
+      - 80:80
+
+  keycloak:
+    image: jboss/keycloak:latest
+    hostname: keycloak
+    environment:
+      - PROXY_ADDRESS_FORWARDING=true
+      - KEYCLOAK_LOGLEVEL=INFO
+      - KEYCLOAK_USER=admin
+      - KEYCLOAK_PASSWORD=admin
+      - DB_VENDOR=POSTGRES
+      - DB_ADDR=keycloak_db
+      - DB_DATABASE=keycloak
+      - DB_USER=keycloak
+      - DB_PASSWORD=password
+    depends_on:
+      - keycloak_db
+    networks:
+      keycloak_network:
+    command: ["-b", "0.0.0.0", "-Dkeycloak.profile.feature.docker=enabled"]
+
+  keycloak_db:
+    image: postgres
+    environment:
+        POSTGRES_DB: keycloak
+        POSTGRES_USER: keycloak
+        POSTGRES_PASSWORD: password
+    networks:
+      keycloak_network:
+    volumes:
+      - ${PWD}/keycloak:/var/lib/postgresql
+
+
+
+networks:
+  public_network:
+    external: true
+  private_network:
+    external: false
+  keycloak_network:
+    external: false
+

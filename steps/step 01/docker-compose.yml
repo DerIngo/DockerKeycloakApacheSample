@@ -1,0 +1,39 @@
+version: '3.8'
+services:
+
+  public_server:
+    image: httpd:2.4
+    hostname: public_server
+    networks:
+      public_network:
+    volumes:
+      - ./public/public_html:/usr/local/apache2/htdocs/
+
+  private_server:
+    image: httpd:2.4
+    hostname: private_server
+    networks:
+      private_network:
+    volumes:
+      - ./private/public_html:/usr/local/apache2/htdocs/
+
+  reverseproxy:
+    image: httpd:2.4
+    command: httpd-foreground -f conf/reverseproxy_httpd.conf    
+    hostname: reverseproxy
+    networks:
+      public_network:
+      private_network:
+    volumes:
+      - ./reverseproxy/public_html:/usr/local/apache2/htdocs/
+      - ${PWD}/reverseproxy/conf/reverseproxy_httpd.conf:/usr/local/apache2/conf/reverseproxy_httpd.conf
+      - ${PWD}/reverseproxy/conf/reverseproxy.conf:/usr/local/apache2/conf/reverseproxy.conf
+    ports:
+      - 80:80
+
+networks:
+  public_network:
+    external: true
+  private_network:
+    external: false
+

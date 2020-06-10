@@ -1,0 +1,3 @@
+docker network create            public_network
+docker network create --internal private_network
+
